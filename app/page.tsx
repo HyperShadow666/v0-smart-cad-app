@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import type React from "react"
+
+import { useState, useEffect } from "react"
 import { ChatComponent } from "@/components/chat-component"
 import { ProjectsComponent } from "@/components/projects-component"
 import { CodeSpaceComponent } from "@/components/code-space-component"
@@ -53,6 +55,7 @@ export default function SmartCADApp() {
   const [versions, setVersions] = useState<Version[]>([])
   const [currentVersionIndex, setCurrentVersionIndex] = useState(0)
   const [theme, setTheme] = useState<"light" | "dark">("light")
+  const [chatWidth, setChatWidth] = useState(400)
   const [isResizing, setIsResizing] = useState(false)
 
   const handleSendMessage = (content: string) => {
@@ -253,27 +256,35 @@ CreatePart`
     }
   }
 
-  const handleMouseDown = () => {
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
     setIsResizing(true)
   }
 
-  const handleMouseMove = (e: MouseEvent) => {
-    if (isResizing) {
-      const newWidth = e.clientX
-      if (newWidth >= 300 && newWidth <= 600) {
-        // setChatWidth removed
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizing) {
+        const newWidth = e.clientX
+        if (newWidth >= 300 && newWidth <= 800) {
+          setChatWidth(newWidth)
+        }
       }
     }
-  }
 
-  const handleMouseUp = () => {
-    setIsResizing(false)
-  }
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
 
-  // if (typeof window !== "undefined") {
-  //   window.addEventListener("mousemove", handleMouseMove as any)
-  //   window.addEventListener("mouseup", handleMouseUp)
-  // }
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove)
+      document.addEventListener("mouseup", handleMouseUp)
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
+    }
+  }, [isResizing])
 
   return (
     <div className={`flex h-screen overflow-hidden ${theme === "dark" ? "dark bg-gray-900" : "bg-white"}`}>
@@ -303,9 +314,10 @@ CreatePart`
       <div className="flex flex-1 pt-16">
         {/* Chat Component */}
         <div
-          className={`flex-shrink-0 border-r ${
+          className={`flex-shrink-0 border-r relative ${
             theme === "dark" ? "border-gray-700" : "border-gray-200"
-          } ${codeSpaceVisible ? "w-[400px]" : "flex-1"}`}
+          } ${codeSpaceVisible ? "" : "flex-1"}`}
+          style={codeSpaceVisible ? { width: `${chatWidth}px` } : undefined}
         >
           <ChatComponent
             mode={mode}
@@ -314,6 +326,14 @@ CreatePart`
             onSendMessage={handleSendMessage}
             theme={theme}
           />
+          {codeSpaceVisible && (
+            <div
+              className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-[#0070AD] transition-colors ${
+                isResizing ? "bg-[#0070AD]" : ""
+              }`}
+              onMouseDown={handleMouseDown}
+            />
+          )}
         </div>
 
         {/* Code Space Component */}
